@@ -4,6 +4,7 @@ import (
     "context"
 	"github.com/urfave/cli"
 	"golang.org/x/oauth2"
+    "io/ioutil"
     "log"
 	"os"
 )
@@ -21,6 +22,7 @@ func configureCommandLineParsing() *cli.App {
 	app := cli.NewApp()
 	app.Name = "shekel"
 	app.Usage = "A command-line client for OAuth 2.0"
+    app.Version = "0.1.0"
 
 	app.Commands = []cli.Command{
 		{
@@ -82,7 +84,7 @@ func executeOAuth2Request(c *cli.Context) error {
     authorizationCode := c.String("code")
 
     if authorizationCode == "" {
-        url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
+        url := conf.AuthCodeURL("state", oauth2.AccessTypeOnline)
         logger.Printf("Visit the url %v for an authorization code.", url)
     } else {
         token, err := conf.Exchange(ctx, authorizationCode)
@@ -92,7 +94,14 @@ func executeOAuth2Request(c *cli.Context) error {
         }
 
         client := conf.Client(ctx, token)
-        client.Get("")
+        resp, reqErr := client.Get(c.String("resource"))
+
+        if reqErr != nil {
+            logger.Fatal(reqErr)
+        }
+
+        body, _ := ioutil.ReadAll(resp.Body)
+        logger.Printf("Received resource: %s", body)
     }
 
 	return nil
